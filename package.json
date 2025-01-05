@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "@elizaos/core": "0.1.7",
-    "@glacier-network/client": "^0.2.1"
+    "@glacier-network/client": "^0.2.1",
+    "@tavily/core": "^0.0.2"
   },
   "devDependencies": {
     "tsup": "8.3.5"

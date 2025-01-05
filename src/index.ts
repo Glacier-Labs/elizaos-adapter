@@ -142,6 +142,24 @@ export class GlacierDBDatabaseAdapter
             title: "memories",
             type: "object",
             properties: {
+              roomId: {
+                type: "string",
+                vectorIndexOption: {
+                    "type": "token",
+                },
+              },
+              agentId: {
+                type: "string",
+                vectorIndexOption: {
+                    "type": "token",
+                },
+              },
+              type: {
+                type: "string",
+                vectorIndexOption: {
+                    "type": "token",
+                },
+              },
               content: {
                 type: "string",
               },
@@ -157,6 +175,9 @@ export class GlacierDBDatabaseAdapter
           })
         await this._db.createCollection("relationships", {})
         await this._db.createCollection("accounts", {})
+        await this._db.createCollection("cache", {})
+        await this._db.createCollection("logs", {})
+
         this._db.collection("accounts").insertOne({
             id: "00000000-0000-0000-0000-000000000000",
             name: "glacierdb",
@@ -210,7 +231,7 @@ export class GlacierDBDatabaseAdapter
     ): Promise<"FOLLOWED" | "MUTED" | null> {
         return this.withDatabase(async () => {
             const participants = await this._db.collection("participants").find({ roomId, userId }).limit(1).toArray();
-            return participants ? participants[0].userState : null;
+            return participants && participants.length > 0 ? participants[0].userState : null;
         }, "getParticipantUserState");
     }
 
@@ -240,7 +261,7 @@ export class GlacierDBDatabaseAdapter
         return this.withDatabase(async () => {
             await this._db.collection("participants").updateOne(
                 { roomId, userId },
-                { $set: { userState: state } }
+                { userState: state }
             );
         }, "setParticipantUserState");
     }
@@ -255,7 +276,7 @@ export class GlacierDBDatabaseAdapter
     async getAccountById(userId: UUID): Promise<Account | null> {
         return this.withDatabase(async () => {
             const accounts = await this._db.collection("accounts").find({ id: userId }).limit(1).toArray();
-            const account = accounts ? accounts[0] : null;
+            const account = accounts && accounts.length > 0 ? accounts[0] : null;
             if (!account) {
                 elizaLogger.debug("Account not found:", { userId });
                 return null;
@@ -334,7 +355,7 @@ export class GlacierDBDatabaseAdapter
     async getMemoryById(id: UUID): Promise<Memory | null> {
         return this.withDatabase(async () => {
             const memorys = await this._db.collection("memories").find({ id: id }).limit(1).toArray();
-            const memory = memorys ? memorys[0] : null;
+            const memory = memorys && memorys.length > 0 ? memorys[0] : null;
             if (!memory) return null;
 
             return {
@@ -737,12 +758,11 @@ export class GlacierDBDatabaseAdapter
 
             const query: any = {
                 'type': params.tableName,
-                'numCandidates': params.match_threshold,
+                'numCandidates': params.count,
                 'vectorPath': 'embedding',
                 'queryVector': cleanVector,
             }
 
-            if (params.unique) query.unique = true;
             if (params.agentId) query.agentId = params.agentId;
             if (params.roomId) query.roomId = params.roomId;
 
@@ -807,9 +827,13 @@ export class GlacierDBDatabaseAdapter
 
     async removeAllMemories(roomId: UUID, tableName: string): Promise<void> {
         return this.withDatabase(async () => {
-            await this._db.collection(tableName).deleteMany({
-                roomId: roomId,
-            });
+            const memos = await this._db.collection(tableName).find({ roomId: roomId }).toArray()
+            for (let index = 0; index < memos.length; index++) {
+                const mem = memos[index];
+                await this._db.collection(tableName).deleteOne({
+                    id: mem.id,
+                });
+            }
         }, "removeAllMemories");
     }
 
