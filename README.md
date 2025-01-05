@@ -17,17 +17,44 @@ Before getting started with Eliza, ensure you have:
 
 ## Quick Start
 
-0. Install the eliza [guide](https://elizaos.github.io/eliza/docs/quickstart/#installation)
+### Install the eliza [guide](https://elizaos.github.io/eliza/docs/quickstart/#installation)
+
+Please be sure to check what the [latest available stable version tag](https://github.com/elizaos/eliza/tags) is.
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/elizaos/eliza.git
+```
+
+2. Enter directory
+
+```bash
+cd eliza
+```
+
+3. Switch to latest tagged release
+
+```bash
+    # Checkout the latest release
+    # This project iterates fast, so we recommend checking out the latest release
+    git checkout $(git describe --tags --abbrev=0)
+```
+
+4. Install dependencies (on initial run)
+
+```bash
+pnpm install --no-frozen-lockfile
+```
 
 
-
-1. Install the GlacierDB dependencies
+### Install the GlacierDB dependencies
 
 ```
 pnpm add @glacier-network/elizaos-adapter @glacier-network/client
 ```
 
-2. Add the GlacierDB adapter to the agent runtime.
+### Add the GlacierDB adapter to the agent runtime.
 
 ```diff
 --- a/agent/src/index.ts
@@ -56,14 +83,35 @@ pnpm add @glacier-network/elizaos-adapter @glacier-network/client
          await db.init();
 ```
 
-3. Start your agent
+### Add configurations to the `.env` file
+
+```
+# GlacierDB For DEMO!!!!
+GLACIERDB_ENDPOINT=https://greenfield.onebitdev.com/glacier-gateway/
+GLACIERDB_NAMESPACE=elizademo
+GLACIERDB_DATASET=demo2
+GLACIERDB_PRIVATE_KEY=0x4eba9156493bb84f988c9ec0765b28063841bfcb434a3a55b07409cb1237697f
+```
+
+### Start your agent
 
 ```
 pnpm start --character="characters/trump.character.json"
+pnpm start:client
 ```
 
-## Dev
+## Development
 
 ```
+cd ./
 npx tsup --format esm src/init.ts
+node dist/init.js
+
+cd ./
+pnpm link --global 
+pnpm install
+pnpm run build
+
+cd ../aliza/agent
+pnpm link @glacier-network/elizaos-adapter
 ```

@@ -17,8 +17,7 @@ import {
 
 export class GlacierDBDatabaseAdapter
     extends DatabaseAdapter<GlacierClient>
-    implements IDatabaseCacheAdapter
-{
+    implements IDatabaseCacheAdapter {
     private _db: any;
     private client: GlacierClient
     private namespace: string;
@@ -142,37 +141,37 @@ export class GlacierDBDatabaseAdapter
             title: "memories",
             type: "object",
             properties: {
-              roomId: {
-                type: "string",
-                vectorIndexOption: {
-                    "type": "token",
+                roomId: {
+                    type: "string",
+                    vectorIndexOption: {
+                        "type": "token",
+                    },
                 },
-              },
-              agentId: {
-                type: "string",
-                vectorIndexOption: {
-                    "type": "token",
+                agentId: {
+                    type: "string",
+                    vectorIndexOption: {
+                        "type": "token",
+                    },
                 },
-              },
-              type: {
-                type: "string",
-                vectorIndexOption: {
-                    "type": "token",
+                type: {
+                    type: "string",
+                    vectorIndexOption: {
+                        "type": "token",
+                    },
                 },
-              },
-              content: {
-                type: "string",
-              },
-              embedding: {
-                type: "string",
-                vectorIndexOption: {
-                  "type": "knnVector",
-                  "dimensions": 384,
-                  "similarity": "euclidean",
+                content: {
+                    type: "string",
                 },
-              }
+                embedding: {
+                    type: "string",
+                    vectorIndexOption: {
+                        "type": "knnVector",
+                        "dimensions": 384,
+                        "similarity": "euclidean",
+                    },
+                }
             }
-          })
+        })
         await this._db.createCollection("relationships", {})
         await this._db.createCollection("accounts", {})
         await this._db.createCollection("cache", {})
@@ -214,7 +213,8 @@ export class GlacierDBDatabaseAdapter
 
     async getRoom(roomId: UUID): Promise<UUID | null> {
         return this.withDatabase(async () => {
-            const room = await this._db.collection("rooms").find({ id: roomId }).limit(1);
+            const rooms = await this._db.collection("rooms").find({ id: roomId }).limit(1).toArray();
+            const room = rooms && rooms.length > 0 ? rooms[0] : null;
             return room ? room.id.toString() : null;
         }, "getRoom");
     }
@@ -242,10 +242,10 @@ export class GlacierDBDatabaseAdapter
     }): Promise<Memory[]> {
         return this.withDatabase(async () => {
             if (params.roomIds.length === 0) return [];
-            const query: any = { roomId: { $in: params.roomIds } };
+            const query: any = { roomId: { $in: params.roomIds }, type: params.tableName };
             if (params.agentId) query.agentId = params.agentId;
 
-            const memories = await this._db.collection(params.tableName).find(query).toArray();
+            const memories = await this._db.collection("memories").find(query).toArray();
             return memories.map((memory) => ({
                 ...memory,
                 content: typeof memory.content === "string" ? JSON.parse(memory.content) : memory.content,
@@ -372,7 +372,6 @@ export class GlacierDBDatabaseAdapter
                 embeddingLength: memory.embedding?.length,
                 contentLength: memory.content?.text?.length,
             });
-
             let isUnique = true;
             if (memory.embedding) {
                 const similarMemories = await this.searchMemoriesByEmbedding(
@@ -387,7 +386,7 @@ export class GlacierDBDatabaseAdapter
                 isUnique = similarMemories.length === 0;
             }
 
-            await this._db.collection(tableName).insertOne({
+            await this._db.collection("memories").insertOne({
                 id: memory.id ?? uuidv4(),
                 type: tableName,
                 content: JSON.stringify(memory.content),
@@ -438,8 +437,10 @@ export class GlacierDBDatabaseAdapter
             if (params.end) query.createdAt = { ...query.createdAt, $lte: params.end };
             if (params.unique) query.unique = true;
             if (params.agentId) query.agentId = params.agentId;
-
-            const memories = await this._db.collection(params.tableName).find(query).sort({ createdAt: -1 }).limit(params.count).toArray();
+            if (params.count > 20) {
+                params.count = 20;
+            }
+            const memories = await this._db.collection("memories").find(query).sort({ createdAt: -1 }).limit(params.count).toArray();
             return memories.map((memory) => ({
                 ...memory,
                 content: typeof memory.content === "string" ? JSON.parse(memory.content) : memory.content,
@@ -668,7 +669,7 @@ export class GlacierDBDatabaseAdapter
         query_field_sub_name: string;
         query_match_count: number;
     }): Promise<{ embedding: number[]; levenshtein_score: number }[]> {
-       return [];
+        return [];
     }
 
     async log(params: {
@@ -766,7 +767,8 @@ export class GlacierDBDatabaseAdapter
             if (params.agentId) query.agentId = params.agentId;
             if (params.roomId) query.roomId = params.roomId;
 
-            const memories = await this._db.collection(params.tableName).find(query).limit(params.count).toArray();
+
+            const memories = await this._db.collection("memories").find(query).limit(params.count).toArray();
             return memories.map((memory) => ({
                 ...memory,
                 content: typeof memory.content === "string" ? JSON.parse(memory.content) : memory.content,
@@ -819,19 +821,21 @@ export class GlacierDBDatabaseAdapter
 
     async removeMemory(memoryId: UUID, tableName: string): Promise<void> {
         return this.withDatabase(async () => {
-            await this._db.collection(tableName).deleteOne({
+            await this._db.collection("memories").deleteOne({
                 id: memoryId,
+                type: tableName,
             });
         }, "removeMemory");
     }
 
     async removeAllMemories(roomId: UUID, tableName: string): Promise<void> {
         return this.withDatabase(async () => {
-            const memos = await this._db.collection(tableName).find({ roomId: roomId }).toArray()
+            const memos = await this._db.collection("memories").find({ roomId: roomId }).toArray()
             for (let index = 0; index < memos.length; index++) {
                 const mem = memos[index];
-                await this._db.collection(tableName).deleteOne({
+                await this._db.collection("memories").deleteOne({
                     id: mem.id,
+                    type: tableName,
                 });
             }
         }, "removeAllMemories");
@@ -848,7 +852,7 @@ export class GlacierDBDatabaseAdapter
             const query: any = { type: tableName, roomId: roomId };
             if (unique) query.unique = true;
 
-            const count = await this._db.collection(tableName).find(query).toArray().length;
+            const count = await this._db.collection("memories").find(query).toArray().length;
             return count;
         }, "countMemories");
     }
