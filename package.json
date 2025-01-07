@@ -7,7 +7,10 @@
   "dependencies": {
     "@elizaos/core": "0.1.7",
     "@glacier-network/client": "^0.2.1",
-    "@tavily/core": "^0.0.2"
+    "@tavily/core": "^0.0.2",
+    "dotenv": "^16.4.7",
+    "sharp": "^0.33.5",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "tsup": "8.3.5"

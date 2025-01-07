@@ -17,6 +17,8 @@ Before getting started with Eliza, ensure you have:
 
 ## Quick Start
 
+In this guide, we'll walk you through the process of setting up Eliza and GlacierDB. 
+
 ### Install the eliza [guide](https://elizaos.github.io/eliza/docs/quickstart/#installation)
 
 Please be sure to check what the [latest available stable version tag](https://github.com/elizaos/eliza/tags) is.
@@ -92,6 +94,8 @@ GLACIERDB_NAMESPACE=elizademo
 GLACIERDB_DATASET=demo2
 GLACIERDB_PRIVATE_KEY=0x4eba9156493bb84f988c9ec0765b28063841bfcb434a3a55b07409cb1237697f
 ```
+
+DEMO dataset: https://scan.bnb.glacier.io/dataset?namespace=elizademo&dataset=demo2
 
 ### Start your agent
 
